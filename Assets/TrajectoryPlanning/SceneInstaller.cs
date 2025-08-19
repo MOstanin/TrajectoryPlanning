@@ -1,7 +1,6 @@
 using Newtonsoft.Json;
 using TrajectoryPlanning.Robot;
 using TrajectoryPlanning.Services;
-using UnityEngine;
 using Zenject;
 
 public class SceneInstaller : MonoInstaller
@@ -10,10 +9,10 @@ public class SceneInstaller : MonoInstaller
     {
         Container.BindInstance(new JsonSerializer()).IfNotBound();
         Container
-            .Bind<ISettingSavingService<RobotModelDto>>()
-            .To<SettingSavingService<RobotModelDto>>()
+            .Bind<ISettingSavingService<string, RobotModelDto>>()
+            .To<SettingSavingService<string, RobotModelDto>>()
             .AsSingle()
-            .WithArguments("Robot/", "Robot/");
+            .WithArguments("Robot/");
         Container.Bind<RobotSettingAdapter>().AsSingle();
         Container.BindIFactory<string, RobotModel>().FromFactory<RobotFactory>();
         Container

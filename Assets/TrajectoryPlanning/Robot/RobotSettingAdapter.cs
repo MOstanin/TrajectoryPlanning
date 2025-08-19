@@ -1,21 +1,18 @@
 using System;
-using System.IO;
-using Newtonsoft.Json;
 using TrajectoryPlanning.Services;
 using UniRx;
-using UnityEngine;
 using Zenject;
 
 namespace TrajectoryPlanning.Robot
 {
     public sealed class RobotSettingAdapter : IInitializable, IDisposable
     {
-        private readonly ISettingSavingService<RobotModelDto> _service;
+        private readonly ISettingSavingService<string, RobotModelDto> _service;
         private readonly IReadOnlyRobotModel _robotModel;
         private readonly CompositeDisposable _disposables = new();
 
         public RobotSettingAdapter(
-            ISettingSavingService<RobotModelDto> service,
+            ISettingSavingService<string, RobotModelDto> service,
             IReadOnlyRobotModel robotModel
         )
         {
@@ -26,17 +23,23 @@ namespace TrajectoryPlanning.Robot
         public void Initialize()
         {
             Observable
-                .Merge(
-                    _robotModel.JointMaxVelocityRadPerSec,
-                    _robotModel.JointMaxAccelerationRadPerSec2
-                )
+                .Merge(_robotModel.JointsMaxVelocity, _robotModel.JointsMaxAcceleration)
                 .Subscribe(_ => Save())
                 .AddTo(_disposables);
         }
 
         private void Save()
         {
-            var dto = new RobotModelDto();
+            var dto = new RobotModelDto(
+                _robotModel.Id,
+                _robotModel.Dof,
+                _robotModel.JointNames,
+                _robotModel.JointMinLimits,
+                _robotModel.JointMaxLimits,
+                _robotModel.JointsMaxVelocity.Value,
+                _robotModel.JointsMaxAcceleration.Value,
+                _robotModel.InitialState
+            );
             _service.Save(dto);
         }
 
