@@ -1,10 +1,12 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <Style src="project://database/Assets/TrajectoryPlanning/Resources/UI/RobotPanel.uss?fileID=7433441132597879392&amp;guid=5c5726d9af5a51c49934c75f108a67b1&amp;type=3#RobotPanel" />
     <ui:VisualElement name="Root" class="root">
-        <ui:VisualElement class="panel" style="width: 50%;">
+        <ui:VisualElement class="panel" style="width: 30%;">
             <ui:Label name="ModelIdLabel" text="Model: -" class="title" />
             <ui:Label name="DofLabel" text="DOF: -" class="subtitle" />
             <ui:ScrollView name="JointsScroll" class="scroll" />
+            <ui:ScrollView name="TargetsScroll" class="scroll" />
+            <ui:Button name="MoveButton" text="Move" style="bottom: 0;" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
