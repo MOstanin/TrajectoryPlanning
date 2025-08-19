@@ -1,0 +1,39 @@
+.root {
+    padding: 8px;
+}
+
+.panel {
+    padding: 8px;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.title {
+    font-size: 32px;
+}
+
+.subtitle {
+    margin-top: 4px;
+    color: rgb(204, 204, 204);
+    font-size: 24px;
+}
+
+.row {
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.jointName {
+    color: rgb(255, 255, 255);
+    font-size: 20px;
+}
+
+.jointValue {
+    color: rgb(0, 255, 255);
+}
+
+.scroll {
+    margin-top: 8px;
+    height: 260px;
+}
