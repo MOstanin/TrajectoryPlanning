@@ -512,6 +512,36 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3270463752582046791, guid: 4b055db88795457419d8d04d3eb5f9be, type: 3}
   m_PrefabInstance: {fileID: 856197065}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &856197067 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2350839664208729839, guid: 4b055db88795457419d8d04d3eb5f9be, type: 3}
+  m_PrefabInstance: {fileID: 856197065}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &856197068 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2565514850345663115, guid: 4b055db88795457419d8d04d3eb5f9be, type: 3}
+  m_PrefabInstance: {fileID: 856197065}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &856197069 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7428384893568783091, guid: 4b055db88795457419d8d04d3eb5f9be, type: 3}
+  m_PrefabInstance: {fileID: 856197065}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &856197070 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1561873295680145874, guid: 4b055db88795457419d8d04d3eb5f9be, type: 3}
+  m_PrefabInstance: {fileID: 856197065}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &856197071 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3684371072364964755, guid: 4b055db88795457419d8d04d3eb5f9be, type: 3}
+  m_PrefabInstance: {fileID: 856197065}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &856197072 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4440727688066793024, guid: 4b055db88795457419d8d04d3eb5f9be, type: 3}
+  m_PrefabInstance: {fileID: 856197065}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1215465185
 GameObject:
   m_ObjectHideFlags: 0
@@ -599,6 +629,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1904575217}
+  - component: {fileID: 1904575218}
   m_Layer: 0
   m_Name: UR10e
   m_TagString: Untagged
@@ -622,6 +653,32 @@ Transform:
   - {fileID: 856197066}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1904575218
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1904575216}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3c2413e25da24604883d5d1d341025f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: TrajectoryPlanning::TrajectoryPlanning.Robot.SixDofRobotController
+  joints:
+  - transform: {fileID: 856197072}
+    axis: 2
+  - transform: {fileID: 856197071}
+    axis: 2
+  - transform: {fileID: 856197070}
+    axis: 2
+  - transform: {fileID: 856197069}
+    axis: 2
+  - transform: {fileID: 856197068}
+    axis: 2
+  - transform: {fileID: 856197067}
+    axis: 2
+  endEffector: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
