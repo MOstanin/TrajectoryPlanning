@@ -23,7 +23,7 @@ namespace TrajectoryPlanning.Robot
         public class RevoluteJoint
         {
             [Tooltip("The Transform that represents this revolute joint.")]
-            public Transform transform;
+            public Transform? transform;
 
             [Tooltip("Local axis around which this joint rotates.")]
             public Axis axis = Axis.Z;
@@ -31,14 +31,14 @@ namespace TrajectoryPlanning.Robot
 
         [Header("Robot Joints (6 DOF)")]
         [SerializeField]
-        private RevoluteJoint[] joints = new RevoluteJoint[6];
+        private RevoluteJoint[]? joints;
 
         [Header("End Effector (optional)")]
         [SerializeField]
-        private Transform endEffector;
+        private Transform? endEffector;
 
-        private IReadOnlyRobotModel _robotModel;
-        private Quaternion[] _initialLocalRotations;
+        private IReadOnlyRobotModel? _robotModel;
+        private Quaternion[]? _initialLocalRotations;
 
         [Inject]
         public void Construct(IReadOnlyRobotModel robotModel)
@@ -53,7 +53,7 @@ namespace TrajectoryPlanning.Robot
 
         private void Start()
         {
-            _robotModel.CurrentState.Subscribe(SetState).AddTo(this);
+            _robotModel?.CurrentState.Subscribe(SetState).AddTo(this);
         }
 
         private void CacheInitialLocalRotations()
@@ -68,7 +68,7 @@ namespace TrajectoryPlanning.Robot
             for (var i = 0; i < joints.Length; i++)
             {
                 var j = joints[i];
-                if (j != null && j.transform != null)
+                if (j.transform != null)
                     _initialLocalRotations[i] = j.transform.localRotation;
                 else
                     throw new InvalidOperationException("Invalid joint configuration");
@@ -87,7 +87,7 @@ namespace TrajectoryPlanning.Robot
             for (var i = 0; i < joints.Length; i++)
             {
                 var joint = joints[i];
-                if (joint == null || joint.transform == null || joint.axis == Axis.None)
+                if (joint.transform == null || joint.axis == Axis.None)
                     throw new InvalidOperationException("Invalid joint configuration");
 
                 var angleRad = state[i];
