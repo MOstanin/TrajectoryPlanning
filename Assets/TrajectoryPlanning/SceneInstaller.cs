@@ -9,6 +9,6 @@ public class SceneInstaller : MonoInstaller
         Container
             .BindInterfacesTo<RobotModel>()
             .AsSingle()
-            .WithArguments(new[] { 0, 0, -Mathf.PI / 2, 0, 0, 0 });
+            .WithArguments(new[] { 0, 0, -Mathf.PI / 2, 0, Mathf.PI / 2, 0 });
     }
 }

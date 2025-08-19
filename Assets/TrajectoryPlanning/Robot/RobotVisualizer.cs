@@ -37,17 +37,50 @@ namespace TrajectoryPlanning.Robot
         [SerializeField]
         private Transform endEffector;
 
+        private IReadOnlyRobotModel _robotModel;
+        private Quaternion[] _initialLocalRotations;
+
         [Inject]
         public void Construct(IReadOnlyRobotModel robotModel)
         {
-            robotModel.CurrentState.Subscribe(SetState).AddTo(this);
+            _robotModel = robotModel;
+        }
+
+        private void Awake()
+        {
+            CacheInitialLocalRotations();
+        }
+
+        private void Start()
+        {
+            _robotModel.CurrentState.Subscribe(SetState).AddTo(this);
+        }
+
+        private void CacheInitialLocalRotations()
+        {
+            if (joints == null)
+            {
+                _initialLocalRotations = null;
+                return;
+            }
+
+            _initialLocalRotations = new Quaternion[joints.Length];
+            for (var i = 0; i < joints.Length; i++)
+            {
+                var j = joints[i];
+                if (j != null && j.transform != null)
+                    _initialLocalRotations[i] = j.transform.localRotation;
+                else
+                    throw new InvalidOperationException("Invalid joint configuration");
+            }
         }
 
         private void SetState(Vector<float> state)
         {
             if (joints == null || joints.Length == 0)
                 throw new InvalidOperationException("No joints assigned");
-
+            if (_initialLocalRotations == null || _initialLocalRotations.Length != joints.Length)
+                throw new InvalidOperationException("Invalid joint configuration");
             if (joints.Length != state.Count)
                 throw new InvalidOperationException("Invalid state vector length");
 
@@ -68,7 +101,8 @@ namespace TrajectoryPlanning.Robot
                     _ => throw new ArgumentOutOfRangeException()
                 };
 
-                joint.transform.localRotation = Quaternion.AngleAxis(angleDeg, axisVector);
+                joint.transform.localRotation =
+                    _initialLocalRotations[i] * Quaternion.AngleAxis(angleDeg, axisVector);
             }
         }
     }
