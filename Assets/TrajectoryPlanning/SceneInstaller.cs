@@ -41,5 +41,7 @@ public class SceneInstaller : MonoInstaller
             .AsSingle();
 
         Container.Bind<PlannerSettingAdapter>().AsSingle().NonLazy();
+
+        Container.BindInterfacesTo<RobotController>().AsSingle();
     }
 }

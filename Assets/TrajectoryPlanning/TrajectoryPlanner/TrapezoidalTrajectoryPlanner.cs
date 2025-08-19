@@ -4,6 +4,7 @@ using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
 using TrajectoryPlanning.Robot;
 using TrajectoryPlanning.TrajectoryPlanner;
+using UnityEngine;
 
 namespace TrajectoryPlanning.Planner
 {
@@ -85,6 +86,7 @@ namespace TrajectoryPlanning.Planner
 
             var T = total.Max();
             var time = BuildTimeSamples(T, dt);
+            Debug.Log($"Trajectory took {time.Length} time samples, dt={dt:F2}s, T={T:F2}s");
 
             var accScaled = new float[dof];
             var vPeakScaled = new float[dof];
@@ -178,6 +180,9 @@ namespace TrajectoryPlanning.Planner
                 accelerations[kIdx] = Vector<float>.Build.Dense(aArr);
             }
 
+            Debug.Log(
+                $"Trajectory generated for {model.Id} totally {time.Length} steps, T={T:F2}s"
+            );
             return new Trajectory(positions, velocities, accelerations, time);
         }
 
@@ -185,8 +190,6 @@ namespace TrajectoryPlanning.Planner
         {
             var times = new List<float>();
             var t = 0f;
-            if (dt <= 0f)
-                dt = 0.01f;
             var nMax = (int)Math.Ceiling(T / dt) + 2;
             for (var i = 0; i < nMax; i++)
             {
