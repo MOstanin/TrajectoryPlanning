@@ -5,6 +5,7 @@
     "com.neuecc.unirx": "https://github.com/neuecc/UniRx.git?path=Assets/Plugins/UniRx/Scripts",
     "com.svermeulen.extenject": "https://github.com/Mathijs-Bakker/Extenject.git?path=UnityProject/Assets/Plugins/Zenject/Source",
     "com.unity.addressables": "2.6.0",
+    "com.unity.ai.assistant": "1.0.0-pre.12",
     "com.unity.ai.navigation": "2.0.8",
     "com.unity.collab-proxy": "2.9.1",
     "com.unity.ide.rider": "3.0.36",
