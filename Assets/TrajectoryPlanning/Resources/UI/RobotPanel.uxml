@@ -4,9 +4,27 @@
         <ui:VisualElement class="panel" style="width: 30%;">
             <ui:Label name="ModelIdLabel" text="Model: -" class="title" />
             <ui:Label name="DofLabel" text="DOF: -" class="subtitle" />
-            <ui:ScrollView name="JointsScroll" class="scroll" />
-            <ui:ScrollView name="TargetsScroll" class="scroll" />
-            <ui:Button name="MoveButton" text="Move" style="bottom: 0;" />
+            <ui:VisualElement name="TopTabs" class="toolbar">
+                <ui:Toggle name="StateTab" text="State" value="true"/>
+                <ui:Toggle name="TargetsTab" text="Targets"/>
+                <ui:Toggle name="VelocityTab" text="Velocity"/>
+                <ui:Toggle name="AccelerationTab" text="Acceleration"/>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="StateSection">
+                <ui:ScrollView name="JointsScroll" class="scroll"/>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="TargetsSection" style="display: none;">
+                <ui:ScrollView name="TargetsScroll" class="scroll"/>
+                <ui:Button name="MoveButton" text="Move" style="bottom: 0;"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="VelocitySection" style="display: none;">
+                <ui:ScrollView name="VelocityLimitsScroll" class="scroll"/>
+            </ui:VisualElement>
+            <ui:VisualElement name="AccelerationSection" style="display: none;">
+                <ui:ScrollView name="AccelerationLimitsScroll" class="scroll"/>
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
