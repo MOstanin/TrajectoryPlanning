@@ -51,7 +51,7 @@ namespace TrajectoryPlanning.Robot
                 return;
             }
 
-            var intervalSec = 1.0 / _planner.Rate;
+            var intervalSec = 1.0 / _planner.Rate.Value;
 
             _moveSimulation = Observable
                 .Interval(TimeSpan.FromSeconds(intervalSec), Scheduler.MainThread)

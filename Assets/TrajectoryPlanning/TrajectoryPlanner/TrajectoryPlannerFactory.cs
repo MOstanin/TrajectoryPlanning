@@ -3,7 +3,7 @@ using TrajectoryPlanning.Services;
 using UnityEngine;
 using Zenject;
 
-namespace TrajectoryPlanning.Planner
+namespace TrajectoryPlanning.TrajectoryPlanner
 {
     public class TrajectoryPlannerFactory : IFactory<string, TrapezoidalTrajectoryPlanner>
     {

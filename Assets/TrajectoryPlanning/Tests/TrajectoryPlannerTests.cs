@@ -4,8 +4,8 @@ using FluentAssertions;
 using MathNet.Numerics.LinearAlgebra;
 using NSubstitute;
 using NUnit.Framework;
-using TrajectoryPlanning.Planner;
 using TrajectoryPlanning.Robot;
+using TrajectoryPlanning.TrajectoryPlanner;
 using UniRx;
 
 namespace TrajectoryPlanning.Tests

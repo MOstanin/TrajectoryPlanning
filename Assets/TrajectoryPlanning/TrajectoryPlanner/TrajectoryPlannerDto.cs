@@ -1,7 +1,7 @@
 using Newtonsoft.Json;
 using TrajectoryPlanning.Utils;
 
-namespace TrajectoryPlanning.Planner
+namespace TrajectoryPlanning.TrajectoryPlanner
 {
 	public class TrajectoryPlannerDto : IWithId<string>
 	{

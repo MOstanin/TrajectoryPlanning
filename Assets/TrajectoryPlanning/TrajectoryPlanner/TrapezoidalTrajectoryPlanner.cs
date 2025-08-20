@@ -3,19 +3,20 @@ using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
 using TrajectoryPlanning.Robot;
-using TrajectoryPlanning.TrajectoryPlanner;
+using UniRx;
 using UnityEngine;
 
-namespace TrajectoryPlanning.Planner
+namespace TrajectoryPlanning.TrajectoryPlanner
 {
-    public sealed class TrapezoidalTrajectoryPlanner : ITrajectoryPlanner
+    public class TrapezoidalTrajectoryPlanner : ITrajectoryPlanner, IDisposable
     {
+        private readonly ReactiveProperty<float> _rate;
         public string Id { get; }
-        public float Rate { get; }
+        public IReactiveProperty<float> Rate => _rate;
 
         public TrapezoidalTrajectoryPlanner(string id, float rate)
         {
-            Rate = rate;
+            _rate = new ReactiveProperty<float>(rate);
             Id = id;
         }
 
@@ -33,7 +34,7 @@ namespace TrajectoryPlanning.Planner
                 throw new ArgumentException("State size does not match robot DOF");
 
             const float eps = 1e-6f;
-            var dt = 1 / Rate;
+            var dt = 1 / Rate.Value;
 
             var dqAbs = new float[dof];
             var sign = new float[dof];
@@ -201,6 +202,11 @@ namespace TrajectoryPlanning.Planner
             if (times.Count == 0 || Math.Abs(times[^1] - T) > 1e-5f)
                 times.Add(T);
             return times.ToArray();
+        }
+
+        public void Dispose()
+        {
+            _rate.Dispose();
         }
     }
 }
