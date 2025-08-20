@@ -10,6 +10,7 @@ namespace TrajectoryPlanning.TrajectoryPlanner
 {
     public class TrapezoidalTrajectoryPlanner : ITrajectoryPlanner, IDisposable
     {
+        private const float Eps = 1e-6f;
         private readonly ReactiveProperty<float> _rate;
         public string Id { get; }
         public IReactiveProperty<float> Rate => _rate;
@@ -26,144 +27,264 @@ namespace TrajectoryPlanning.TrajectoryPlanner
             Vector<float> qTarget
         )
         {
-            var dof = model.Dof;
-            var maxVel = model.JointsMaxVelocity.Value;
-            var maxAcc = model.JointsMaxAcceleration.Value;
+            var degreesOfFreedom = model.Dof;
+            var jointVelocityLimits = model.JointsMaxVelocity.Value;
+            var jointAccelerationLimits = model.JointsMaxAcceleration.Value;
 
-            if (q0.Count != dof || qTarget.Count != dof)
+            if (q0.Count != degreesOfFreedom || qTarget.Count != degreesOfFreedom)
                 throw new ArgumentException("State size does not match robot DOF");
 
-            const float eps = 1e-6f;
-            var dt = 1 / Rate.Value;
+            var timeStep = 1 / Rate.Value;
 
-            var dqAbs = new float[dof];
-            var sign = new float[dof];
-            var tAcc = new float[dof];
-            var tCruise = new float[dof];
-            var tDec = new float[dof];
-            var vPeak = new float[dof];
-            var total = new float[dof];
+            ComputeBaseProfiles(
+                degreesOfFreedom,
+                q0,
+                qTarget,
+                jointVelocityLimits,
+                jointAccelerationLimits,
+                out var dqAbs,
+                out var sign,
+                out var tAcc,
+                out var tCruise,
+                out var tDec,
+                out var vPeak,
+                out var total
+            );
 
-            for (var i = 0; i < dof; i++)
+            var totalDuration = total.Max();
+            var timeSamples = BuildTimeSamples(totalDuration, timeStep);
+            Debug.Log(
+                $"Trajectory took {timeSamples.Length} time samples, dt={timeStep:F2}s, T={totalDuration:F2}s"
+            );
+
+            ComputePhasesForSharedTime(
+                degreesOfFreedom,
+                jointVelocityLimits,
+                jointAccelerationLimits,
+                dqAbs,
+                tAcc,
+                tCruise,
+                tDec,
+                vPeak,
+                total,
+                totalDuration,
+                out var tAccScaled,
+                out var tCruiseScaled,
+                out var tDecScaled,
+                out var vPeakScaled,
+                out var accScaled
+            );
+
+            var trajectory = SampleTrajectory(
+                degreesOfFreedom,
+                timeSamples,
+                q0,
+                qTarget,
+                dqAbs,
+                sign,
+                tAccScaled,
+                tCruiseScaled,
+                tDecScaled,
+                vPeakScaled,
+                accScaled
+            );
+
+            Debug.Log(
+                $"Trajectory generated for {model.Id} totally {timeSamples.Length} steps, T={totalDuration:F2}s"
+            );
+            return trajectory;
+        }
+
+        private static float[] BuildTimeSamples(float T, float dt)
+        {
+            var times = new List<float>();
+            var t = 0f;
+            var nMax = (int)Math.Ceiling(T / dt) + 2;
+            for (var i = 0; i < nMax; i++)
             {
-                var vLim = Math.Max(maxVel[i], eps);
-                var aLim = Math.Max(maxAcc[i], eps);
-                var dq = qTarget[i] - q0[i];
-                dqAbs[i] = Math.Abs(dq);
-                sign[i] = Math.Sign(dqAbs[i]) == 0 ? 0f : Math.Sign(dq);
+                times.Add(t);
+                t += dt;
+                if (t >= T)
+                    break;
+            }
+            if (times.Count == 0 || Math.Abs(times[^1] - T) > 1e-5f)
+                times.Add(T);
+            return times.ToArray();
+        }
 
-                if (dqAbs[i] <= eps)
+        private static void ComputeBaseProfiles(
+            int degreesOfFreedom,
+            Vector<float> q0,
+            Vector<float> qTarget,
+            float[] jointVelocityLimits,
+            float[] jointAccelerationLimits,
+            out float[] absoluteDelta,
+            out float[] directionSign,
+            out float[] accelTime,
+            out float[] cruiseTime,
+            out float[] decelTime,
+            out float[] peakVelocity,
+            out float[] jointTotalTime
+        )
+        {
+            absoluteDelta = new float[degreesOfFreedom];
+            directionSign = new float[degreesOfFreedom];
+            accelTime = new float[degreesOfFreedom];
+            cruiseTime = new float[degreesOfFreedom];
+            decelTime = new float[degreesOfFreedom];
+            peakVelocity = new float[degreesOfFreedom];
+            jointTotalTime = new float[degreesOfFreedom];
+
+            for (var i = 0; i < degreesOfFreedom; i++)
+            {
+                var vLim = Math.Max(jointVelocityLimits[i], Eps);
+                var aLim = Math.Max(jointAccelerationLimits[i], Eps);
+                var dq = qTarget[i] - q0[i];
+                absoluteDelta[i] = Math.Abs(dq);
+                directionSign[i] = Math.Sign(absoluteDelta[i]) == 0 ? 0f : Math.Sign(dq);
+
+                if (absoluteDelta[i] <= Eps)
                 {
-                    tAcc[i] = 0f;
-                    tCruise[i] = 0f;
-                    tDec[i] = 0f;
-                    vPeak[i] = 0f;
-                    total[i] = 0f;
+                    accelTime[i] = 0f;
+                    cruiseTime[i] = 0f;
+                    decelTime[i] = 0f;
+                    peakVelocity[i] = 0f;
+                    jointTotalTime[i] = 0f;
                     continue;
                 }
 
                 var tToVmax = vLim / aLim;
                 var dAccel = 0.5f * aLim * (float)Math.Pow(tToVmax, 2);
 
-                if (dqAbs[i] < 2f * dAccel)
+                if (absoluteDelta[i] < 2f * dAccel)
                 {
-                    var tAccTri = (float)Math.Sqrt(dqAbs[i] / aLim);
-                    tAcc[i] = tAccTri;
-                    tCruise[i] = 0f;
-                    tDec[i] = tAccTri;
-                    vPeak[i] = aLim * tAccTri;
-                    total[i] = 2f * tAccTri;
+                    var tAccTri = (float)Math.Sqrt(absoluteDelta[i] / aLim);
+                    accelTime[i] = tAccTri;
+                    cruiseTime[i] = 0f;
+                    decelTime[i] = tAccTri;
+                    peakVelocity[i] = aLim * tAccTri;
+                    jointTotalTime[i] = 2f * tAccTri;
                 }
                 else
                 {
-                    tAcc[i] = tToVmax;
-                    var dCruise = dqAbs[i] - 2f * dAccel;
-                    tCruise[i] = dCruise / vLim;
-                    tDec[i] = tToVmax;
-                    vPeak[i] = vLim;
-                    total[i] = 2f * tToVmax + tCruise[i];
+                    accelTime[i] = tToVmax;
+                    var dCruise = absoluteDelta[i] - 2f * dAccel;
+                    cruiseTime[i] = dCruise / vLim;
+                    decelTime[i] = tToVmax;
+                    peakVelocity[i] = vLim;
+                    jointTotalTime[i] = 2f * tToVmax + cruiseTime[i];
                 }
             }
+        }
 
-            var T = total.Max();
-            var time = BuildTimeSamples(T, dt);
-            Debug.Log($"Trajectory took {time.Length} time samples, dt={dt:F2}s, T={T:F2}s");
+        private static void ComputePhasesForSharedTime(
+            int degreesOfFreedom,
+            float[] jointVelocityLimits,
+            float[] jointAccelerationLimits,
+            float[] absoluteDelta,
+            float[] accelTimeBase,
+            float[] cruiseTimeBase,
+            float[] decelTimeBase,
+            float[] peakVelocityBase,
+            float[] jointTotalTime,
+            float totalDuration,
+            out float[] accelTime,
+            out float[] cruiseTime,
+            out float[] decelTime,
+            out float[] peakVelocity,
+            out float[] acceleration
+        )
+        {
+            accelTime = new float[degreesOfFreedom];
+            cruiseTime = new float[degreesOfFreedom];
+            decelTime = new float[degreesOfFreedom];
+            peakVelocity = new float[degreesOfFreedom];
+            acceleration = new float[degreesOfFreedom];
 
-            var accScaled = new float[dof];
-            var vPeakScaled = new float[dof];
-            var tAccScaled = new float[dof];
-            var tCruiseScaled = new float[dof];
-            var tDecScaled = new float[dof];
-
-            for (var i = 0; i < dof; i++)
+            for (var i = 0; i < degreesOfFreedom; i++)
             {
-                if (dqAbs[i] <= eps)
+                if (absoluteDelta[i] <= Eps)
                 {
-                    accScaled[i] = 0f;
-                    vPeakScaled[i] = 0f;
-                    tAccScaled[i] = 0f;
-                    tCruiseScaled[i] = T;
-                    tDecScaled[i] = 0f;
+                    acceleration[i] = 0f;
+                    peakVelocity[i] = 0f;
+                    accelTime[i] = 0f;
+                    cruiseTime[i] = totalDuration;
+                    decelTime[i] = 0f;
                     continue;
                 }
 
-                var vLim = Math.Max(maxVel[i], eps);
-                var aLim = Math.Max(maxAcc[i], eps);
-                var d = dqAbs[i];
+                var vLim = Math.Max(jointVelocityLimits[i], Eps);
+                var aLim = Math.Max(jointAccelerationLimits[i], Eps);
+                var d = absoluteDelta[i];
 
-                var vReq = 2f * d / Math.Max(T, eps);
-                var aReq = 4f * d / Math.Max(T * T, eps);
+                var vReq = 2f * d / Math.Max(totalDuration, Eps);
+                var aReq = 4f * d / Math.Max(totalDuration * totalDuration, Eps);
 
-                if (vReq <= vLim + eps && aReq <= aLim + eps)
+                if (vReq <= vLim + Eps && aReq <= aLim + Eps)
                 {
-                    tAccScaled[i] = T * 0.5f;
-                    tCruiseScaled[i] = 0f;
-                    tDecScaled[i] = T * 0.5f;
-                    vPeakScaled[i] = vReq;
-                    accScaled[i] = aReq;
+                    accelTime[i] = totalDuration * 0.5f;
+                    cruiseTime[i] = 0f;
+                    decelTime[i] = totalDuration * 0.5f;
+                    peakVelocity[i] = vReq;
+                    acceleration[i] = aReq;
                 }
                 else
                 {
-                    var denom = vLim * T - d;
-                    if (denom > eps)
+                    var denom = vLim * totalDuration - d;
+                    if (denom > Eps)
                     {
                         var aCalc = (vLim * vLim) / denom;
-                        if (aCalc > eps && aCalc <= aLim + eps)
+                        if (aCalc > Eps && aCalc <= aLim + Eps)
                         {
                             var t1 = vLim / aCalc;
-                            var tc = Math.Max(0f, T - 2f * t1);
-                            tAccScaled[i] = t1;
-                            tCruiseScaled[i] = tc;
-                            tDecScaled[i] = t1;
-                            vPeakScaled[i] = vLim;
-                            accScaled[i] = aCalc;
+                            var tc = Math.Max(0f, totalDuration - 2f * t1);
+                            accelTime[i] = t1;
+                            cruiseTime[i] = tc;
+                            decelTime[i] = t1;
+                            peakVelocity[i] = vLim;
+                            acceleration[i] = aCalc;
                             continue;
                         }
                     }
 
-                    var k = total[i] <= eps ? 1f : T / total[i];
-                    tAccScaled[i] = tAcc[i] * k;
-                    tCruiseScaled[i] = tCruise[i] * k;
-                    tDecScaled[i] = tDec[i] * k;
-                    vPeakScaled[i] = vPeak[i] / k;
-                    accScaled[i] = tAccScaled[i] <= eps ? 0f : vPeakScaled[i] / tAccScaled[i];
+                    var k = jointTotalTime[i] <= Eps ? 1f : totalDuration / jointTotalTime[i];
+                    accelTime[i] = accelTimeBase[i] * k;
+                    cruiseTime[i] = cruiseTimeBase[i] * k;
+                    decelTime[i] = decelTimeBase[i] * k;
+                    peakVelocity[i] = peakVelocityBase[i] / k;
+                    acceleration[i] = accelTime[i] <= Eps ? 0f : peakVelocity[i] / accelTime[i];
                 }
             }
+        }
 
-            var positions = new Vector<float>[time.Length];
-            var velocities = new Vector<float>[time.Length];
-            var accelerations = new Vector<float>[time.Length];
+        private static Trajectory SampleTrajectory(
+            int degreesOfFreedom,
+            float[] timeSamples,
+            Vector<float> q0,
+            Vector<float> qTarget,
+            float[] absoluteDelta,
+            float[] directionSign,
+            float[] accelTime,
+            float[] cruiseTime,
+            float[] decelTime,
+            float[] peakVelocity,
+            float[] acceleration
+        )
+        {
+            var positions = new Vector<float>[timeSamples.Length];
+            var velocities = new Vector<float>[timeSamples.Length];
+            var accelerations = new Vector<float>[timeSamples.Length];
 
-            for (var kIdx = 0; kIdx < time.Length; kIdx++)
+            for (var kIdx = 0; kIdx < timeSamples.Length; kIdx++)
             {
-                var tNow = time[kIdx];
-                var qArr = new float[dof];
-                var vArr = new float[dof];
-                var aArr = new float[dof];
+                var tNow = timeSamples[kIdx];
+                var qArr = new float[degreesOfFreedom];
+                var vArr = new float[degreesOfFreedom];
+                var aArr = new float[degreesOfFreedom];
 
-                for (var i = 0; i < dof; i++)
+                for (var i = 0; i < degreesOfFreedom; i++)
                 {
-                    if (dqAbs[i] <= eps)
+                    if (absoluteDelta[i] <= Eps)
                     {
                         qArr[i] = q0[i];
                         vArr[i] = 0f;
@@ -171,12 +292,12 @@ namespace TrajectoryPlanning.TrajectoryPlanner
                         continue;
                     }
 
-                    var sgn = sign[i];
-                    var a = accScaled[i];
-                    var vp = vPeakScaled[i];
-                    var t1 = tAccScaled[i];
-                    var tc = tCruiseScaled[i];
-                    var t2 = tDecScaled[i];
+                    var sgn = directionSign[i];
+                    var a = acceleration[i];
+                    var vp = peakVelocity[i];
+                    var t1 = accelTime[i];
+                    var tc = cruiseTime[i];
+                    var t2 = decelTime[i];
 
                     if (tNow <= t1)
                     {
@@ -216,27 +337,7 @@ namespace TrajectoryPlanning.TrajectoryPlanner
                 accelerations[kIdx] = Vector<float>.Build.Dense(aArr);
             }
 
-            Debug.Log(
-                $"Trajectory generated for {model.Id} totally {time.Length} steps, T={T:F2}s"
-            );
-            return new Trajectory(positions, velocities, accelerations, time);
-        }
-
-        private static float[] BuildTimeSamples(float T, float dt)
-        {
-            var times = new List<float>();
-            var t = 0f;
-            var nMax = (int)Math.Ceiling(T / dt) + 2;
-            for (var i = 0; i < nMax; i++)
-            {
-                times.Add(t);
-                t += dt;
-                if (t >= T)
-                    break;
-            }
-            if (times.Count == 0 || Math.Abs(times[^1] - T) > 1e-5f)
-                times.Add(T);
-            return times.ToArray();
+            return new Trajectory(positions, velocities, accelerations, timeSamples);
         }
 
         public void Dispose()
