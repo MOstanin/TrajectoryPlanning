@@ -18,6 +18,7 @@
             <ui:VisualElement name="TargetsSection" style="display: none;">
                 <ui:ScrollView name="TargetsScroll" class="scroll"/>
                 <ui:Button name="MoveButton" text="Move" style="bottom: 0;"/>
+                <ui:Button name="StopButton" text="Stop" style="bottom: 0;"/>
             </ui:VisualElement>
             <ui:VisualElement name="VelocitySection" style="display: none;">
                 <ui:ScrollView name="VelocityLimitsScroll" class="scroll"/>

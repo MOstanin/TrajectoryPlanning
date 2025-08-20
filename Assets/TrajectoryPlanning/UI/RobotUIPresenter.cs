@@ -74,6 +74,10 @@ namespace TrajectoryPlanning.UI
                 .MoveButton.OnClickAsObservable()
                 .Subscribe(_ => MoveToTargets())
                 .AddTo(_disposables);
+            _view
+                .StopButton.OnClickAsObservable()
+                .Subscribe(_ => _controller.Stop())
+                .AddTo(_disposables);
             UpdateState(_robotModel.InitialState);
         }
 

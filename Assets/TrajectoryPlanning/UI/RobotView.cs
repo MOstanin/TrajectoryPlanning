@@ -6,8 +6,17 @@ using UnityEngine.UIElements;
 
 namespace TrajectoryPlanning.UI
 {
-    public class RobotView
+    public class RobotView : IDisposable
     {
+        private enum UIState
+        {
+            None,
+            CurrentState,
+            TargetState,
+            Velocity,
+            Acceleration
+        }
+
         public Label ModelIdLabel { get; }
         public Label DofLabel { get; }
         public ScrollView JointsScroll { get; }
@@ -15,11 +24,29 @@ namespace TrajectoryPlanning.UI
         public ScrollView VelocityLimitsScroll { get; }
         public ScrollView AccelerationLimitsScroll { get; }
         public Button MoveButton { get; }
+        public Button StopButton { get; }
 
         private readonly List<Label> _jointValueLabels = new();
         private readonly List<FloatField> _jointInputFields = new();
         private readonly List<FloatField> _velocityLimitFields = new();
         private readonly List<FloatField> _accelerationLimitFields = new();
+
+        private readonly VisualElement _stateSection;
+        private readonly VisualElement _targetsSection;
+        private readonly VisualElement _velocitySection;
+        private readonly VisualElement _accelerationSection;
+
+        private readonly Toggle _stateTab;
+        private readonly Toggle _targetsTab;
+        private readonly Toggle _velocityTab;
+        private readonly Toggle _accelerationTab;
+
+        private readonly EventCallback<ChangeEvent<bool>> _onStateTabChanged;
+        private readonly EventCallback<ChangeEvent<bool>> _onTargetsTabChanged;
+        private readonly EventCallback<ChangeEvent<bool>> _onVelocityTabChanged;
+        private readonly EventCallback<ChangeEvent<bool>> _onAccelerationTabChanged;
+
+        private bool _isDisposed;
 
         public RobotView(UIDocument document)
         {
@@ -31,58 +58,62 @@ namespace TrajectoryPlanning.UI
             VelocityLimitsScroll = root.Q<ScrollView>("VelocityLimitsScroll");
             AccelerationLimitsScroll = root.Q<ScrollView>("AccelerationLimitsScroll");
             MoveButton = root.Q<Button>("MoveButton");
+            StopButton = root.Q<Button>("StopButton");
 
-            var stateSection = root.Q<VisualElement>("StateSection");
-            var targetsSection = root.Q<VisualElement>("TargetsSection");
-            var velocitySection = root.Q<VisualElement>("VelocitySection");
-            var accelerationSection = root.Q<VisualElement>("AccelerationSection");
+            _stateSection = root.Q<VisualElement>("StateSection");
+            _targetsSection = root.Q<VisualElement>("TargetsSection");
+            _velocitySection = root.Q<VisualElement>("VelocitySection");
+            _accelerationSection = root.Q<VisualElement>("AccelerationSection");
 
-            var stateTab = root.Q<Toggle>("StateTab");
-            var targetsTab = root.Q<Toggle>("TargetsTab");
-            var velocityTab = root.Q<Toggle>("VelocityTab");
-            var accelerationTab = root.Q<Toggle>("AccelerationTab");
+            _stateTab = root.Q<Toggle>("StateTab");
+            _targetsTab = root.Q<Toggle>("TargetsTab");
+            _velocityTab = root.Q<Toggle>("VelocityTab");
+            _accelerationTab = root.Q<Toggle>("AccelerationTab");
 
-            stateTab.RegisterValueChangedCallback(evt =>
+            _onStateTabChanged = evt =>
             {
                 if (evt.newValue)
-                    ShowSection("State");
-            });
-            targetsTab.RegisterValueChangedCallback(evt =>
+                    ShowSection(UIState.CurrentState);
+            };
+            _onTargetsTabChanged = evt =>
             {
                 if (evt.newValue)
-                    ShowSection("Targets");
-            });
-
-            velocityTab.RegisterValueChangedCallback(evt =>
+                    ShowSection(UIState.TargetState);
+            };
+            _onVelocityTabChanged = evt =>
             {
                 if (evt.newValue)
-                    ShowSection("Velocity");
-            });
-            accelerationTab.RegisterValueChangedCallback(evt =>
+                    ShowSection(UIState.Velocity);
+            };
+            _onAccelerationTabChanged = evt =>
             {
                 if (evt.newValue)
-                    ShowSection("Acceleration");
-            });
+                    ShowSection(UIState.Acceleration);
+            };
 
-            ShowSection("State");
-            return;
+            _stateTab.RegisterValueChangedCallback(_onStateTabChanged);
+            _targetsTab.RegisterValueChangedCallback(_onTargetsTabChanged);
+            _velocityTab.RegisterValueChangedCallback(_onVelocityTabChanged);
+            _accelerationTab.RegisterValueChangedCallback(_onAccelerationTabChanged);
 
-            void ShowSection(string which)
-            {
-                stateSection.style.display =
-                    which == "State" ? DisplayStyle.Flex : DisplayStyle.None;
-                targetsSection.style.display =
-                    which == "Targets" ? DisplayStyle.Flex : DisplayStyle.None;
-                velocitySection.style.display =
-                    which == "Velocity" ? DisplayStyle.Flex : DisplayStyle.None;
-                accelerationSection.style.display =
-                    which == "Acceleration" ? DisplayStyle.Flex : DisplayStyle.None;
+            ShowSection(UIState.CurrentState);
+        }
 
-                stateTab.SetValueWithoutNotify(which == "State");
-                targetsTab.SetValueWithoutNotify(which == "Targets");
-                velocityTab.SetValueWithoutNotify(which == "Velocity");
-                accelerationTab.SetValueWithoutNotify(which == "Acceleration");
-            }
+        private void ShowSection(UIState which)
+        {
+            _stateSection.style.display =
+                which == UIState.CurrentState ? DisplayStyle.Flex : DisplayStyle.None;
+            _targetsSection.style.display =
+                which == UIState.TargetState ? DisplayStyle.Flex : DisplayStyle.None;
+            _velocitySection.style.display =
+                which == UIState.Velocity ? DisplayStyle.Flex : DisplayStyle.None;
+            _accelerationSection.style.display =
+                which == UIState.Acceleration ? DisplayStyle.Flex : DisplayStyle.None;
+
+            _stateTab.SetValueWithoutNotify(which == UIState.CurrentState);
+            _targetsTab.SetValueWithoutNotify(which == UIState.TargetState);
+            _velocityTab.SetValueWithoutNotify(which == UIState.Velocity);
+            _accelerationTab.SetValueWithoutNotify(which == UIState.Acceleration);
         }
 
         public void SetModel(string modelId, int dof)
@@ -218,6 +249,14 @@ namespace TrajectoryPlanning.UI
                 vec[i] = deg * Mathf.Deg2Rad;
             }
             return vec;
+        }
+
+        public void Dispose()
+        {
+            _stateTab.UnregisterValueChangedCallback(_onStateTabChanged);
+            _targetsTab.UnregisterValueChangedCallback(_onTargetsTabChanged);
+            _velocityTab.UnregisterValueChangedCallback(_onVelocityTabChanged);
+            _accelerationTab.UnregisterValueChangedCallback(_onAccelerationTabChanged);
         }
     }
 }
