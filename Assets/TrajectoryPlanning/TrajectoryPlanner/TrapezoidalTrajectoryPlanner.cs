@@ -107,12 +107,47 @@ namespace TrajectoryPlanning.TrajectoryPlanner
                     continue;
                 }
 
-                var k = total[i] <= eps ? 1f : T / total[i];
-                tAccScaled[i] = tAcc[i] * k;
-                tCruiseScaled[i] = tCruise[i] * k;
-                tDecScaled[i] = tDec[i] * k;
-                vPeakScaled[i] = vPeak[i] / k;
-                accScaled[i] = tAccScaled[i] <= eps ? 0f : vPeakScaled[i] / tAccScaled[i];
+                var vLim = Math.Max(maxVel[i], eps);
+                var aLim = Math.Max(maxAcc[i], eps);
+                var d = dqAbs[i];
+
+                var vReq = 2f * d / Math.Max(T, eps);
+                var aReq = 4f * d / Math.Max(T * T, eps);
+
+                if (vReq <= vLim + eps && aReq <= aLim + eps)
+                {
+                    tAccScaled[i] = T * 0.5f;
+                    tCruiseScaled[i] = 0f;
+                    tDecScaled[i] = T * 0.5f;
+                    vPeakScaled[i] = vReq;
+                    accScaled[i] = aReq;
+                }
+                else
+                {
+                    var denom = vLim * T - d;
+                    if (denom > eps)
+                    {
+                        var aCalc = (vLim * vLim) / denom;
+                        if (aCalc > eps && aCalc <= aLim + eps)
+                        {
+                            var t1 = vLim / aCalc;
+                            var tc = Math.Max(0f, T - 2f * t1);
+                            tAccScaled[i] = t1;
+                            tCruiseScaled[i] = tc;
+                            tDecScaled[i] = t1;
+                            vPeakScaled[i] = vLim;
+                            accScaled[i] = aCalc;
+                            continue;
+                        }
+                    }
+
+                    var k = total[i] <= eps ? 1f : T / total[i];
+                    tAccScaled[i] = tAcc[i] * k;
+                    tCruiseScaled[i] = tCruise[i] * k;
+                    tDecScaled[i] = tDec[i] * k;
+                    vPeakScaled[i] = vPeak[i] / k;
+                    accScaled[i] = tAccScaled[i] <= eps ? 0f : vPeakScaled[i] / tAccScaled[i];
+                }
             }
 
             var positions = new Vector<float>[time.Length];
