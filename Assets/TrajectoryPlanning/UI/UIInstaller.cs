@@ -20,10 +20,16 @@ namespace TrajectoryPlanning.UI
             if (plannerUiDocument == null)
                 throw new Exception("Failed to load planner UI document");
 
-            Container.BindInstance(new RobotView(robotUiDocument)).AsSingle();
+            Container
+                .BindInterfacesAndSelfTo<RobotView>()
+                .AsSingle()
+                .WithArguments(robotUiDocument);
             Container.BindInterfacesAndSelfTo<RobotUIPresenter>().AsSingle();
 
-            Container.BindInstance(new TrajectoryPlannerView(plannerUiDocument)).AsSingle();
+            Container
+                .BindInterfacesAndSelfTo<TrajectoryPlannerView>()
+                .AsSingle()
+                .WithArguments(plannerUiDocument);
             Container.BindInterfacesAndSelfTo<TrajectoryPlannerPresenter>().AsSingle();
         }
     }

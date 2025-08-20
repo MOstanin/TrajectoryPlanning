@@ -15,7 +15,7 @@ namespace TrajectoryPlanning
                 .Bind<ISettingSavingService<string, RobotModelDto>>()
                 .To<SettingSavingService<string, RobotModelDto>>()
                 .AsSingle()
-                .WithArguments("Robot/");
+                .WithArguments("Robot");
             Container.BindIFactory<string, RobotModel>().FromFactory<RobotFactory>();
             Container
                 .BindInterfacesTo<RobotModel>()
@@ -23,14 +23,13 @@ namespace TrajectoryPlanning
                     factory => factory.Create("UR10e")
                 )
                 .AsSingle();
-            Container.Bind<RobotSettingAdapter>().AsSingle().NonLazy();
+            Container.BindInterfacesTo<RobotSettingAdapter>().AsSingle().NonLazy();
 
             Container
                 .Bind<ISettingSavingService<string, TrajectoryPlannerDto>>()
                 .To<SettingSavingService<string, TrajectoryPlannerDto>>()
                 .AsSingle()
-                .WithArguments("Planner/");
-
+                .WithArguments("Planner");
             Container
                 .BindIFactory<string, TrapezoidalTrajectoryPlanner>()
                 .FromFactory<TrajectoryPlannerFactory>();
@@ -41,8 +40,7 @@ namespace TrajectoryPlanning
                     TrapezoidalTrajectoryPlanner
                 >(factory => factory.Create("TrapezoidalPlanner"))
                 .AsSingle();
-
-            Container.Bind<TrajectoryPlannerSettingAdapter>().AsSingle().NonLazy();
+            Container.BindInterfacesTo<TrajectoryPlannerSettingAdapter>().AsSingle().NonLazy();
 
             Container.BindInterfacesTo<RobotController>().AsSingle();
         }
